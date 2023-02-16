@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=swiv
+GenericName=Image Viewer
+Exec=swiv %F
+MimeType=image/bmp;image/gif;image/jpeg;image/jpg;image/png;image/tiff;image/x-bmp;image/x-portable-anymap;image/x-portable-bitmap;image/x-portable-graymap;image/x-tga;image/x-xpixmap;
+NoDisplay=true
