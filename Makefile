@@ -1,9 +1,10 @@
 WL_SCANNER = wayland-scanner
 WL_PROTOCOLS_DIR = /usr/share/wayland-protocols/
-XDG_SHELL_PROTOCOL = $(WL_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml
+XDG_SHELL = $(WL_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml
+XDG_DECORATION = $(WL_PROTOCOLS_DIR)/unstable/xdg-decoration/xdg-decoration-unstable-v1.xml
 
-WL_SRC = xdg-shell-protocol.c
-WL_HDR = xdg-shell-client-protocol.h
+WL_SRC = xdg-shell-protocol.c xdg-decoration-unstable-protocol.c
+WL_HDR = xdg-shell-client-protocol.h xdg-decoration-unstable-client-protocol.h
 
 version = 0.8
 
@@ -37,7 +38,7 @@ ldlibs = $(LDLIBS) -lm -lImlib2 \
   `pkg-config --libs cairo pangocairo pango xkbcommon wayland-client wayland-cursor`
 
 objs = autoreload_$(AUTORELOAD).o commands.o image.o main.o options.o \
-  thumbs.o util.o window.o xdg-shell-protocol.o shm.o
+  thumbs.o util.o window.o xdg-shell-protocol.o shm.o xdg-decoration-unstable-protocol.o
 
 all: swiv
 
@@ -59,11 +60,19 @@ options.o: version.h
 
 xdg-shell-protocol.c:
 	@echo "GEN $@"
-	$(WL_SCANNER) private-code $(XDG_SHELL_PROTOCOL) $@
+	$(WL_SCANNER) private-code $(XDG_SHELL) $@
 
 xdg-shell-client-protocol.h:
 	@echo "GEN $@"
-	$(WL_SCANNER) client-header $(XDG_SHELL_PROTOCOL) $@
+	$(WL_SCANNER) client-header $(XDG_SHELL) $@
+
+xdg-decoration-unstable-protocol.c:
+	@echo "GEN $@"
+	$(WL_SCANNER) private-code $(XDG_DECORATION) $@
+
+xdg-decoration-unstable-client-protocol.h:
+	@echo "GEN $@"
+	$(WL_SCANNER) client-header $(XDG_DECORATION) $@
 
 config.h:
 	@echo "GEN $@"

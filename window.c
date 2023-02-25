@@ -33,6 +33,7 @@
 #include <wayland-cursor.h>
 
 #include "xdg-shell-client-protocol.h"
+#include "xdg-decoration-unstable-client-protocol.h"
 #include "shm.h"
 
 enum {
@@ -257,7 +258,8 @@ static void handle_global(void *data, struct wl_registry *registry,
 	} else if (strcmp(interface, wl_shm_interface.name) == 0) {
 		win->shm = wl_registry_bind(registry, name, &wl_shm_interface, 1);
 	} else if (strcmp(interface, xdg_wm_base_interface.name) == 0) {
-		win->xdg_wm_base = wl_registry_bind(registry, name, &xdg_wm_base_interface, 1);
+		win->xdg_wm_base = wl_registry_bind(registry, name,
+				&xdg_wm_base_interface, 1);
 	} else if (strcmp(interface, wl_seat_interface.name) == 0) {
 		int want_version = 5;
 		if (want_version > version)
@@ -268,6 +270,9 @@ static void handle_global(void *data, struct wl_registry *registry,
 				&wl_seat_interface, want_version);
 		win->seat = seat;
 		wl_seat_add_listener(seat, &seat_listener, win);
+	} else if (strcmp(interface, zxdg_decoration_manager_v1_interface.name) == 0) {
+		win->decor_manager = wl_registry_bind(registry, name,
+				&zxdg_decoration_manager_v1_interface, 1);
 	}
 }
 
@@ -570,6 +575,15 @@ void win_open(win_t *win)
 	if (options->fullscreen)
 		win_toggle_fullscreen(win);
 
+	if (win->decor_manager != NULL) {
+		win->top_decor =
+			zxdg_decoration_manager_v1_get_toplevel_decoration(
+					win->decor_manager, win->xdg_toplevel);
+		zxdg_toplevel_decoration_v1_set_mode(
+				win->top_decor,
+				ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+	}
+
 	xdg_wm_base_add_listener(win->xdg_wm_base, &xdg_wm_base_listener, win);
 
 	init_cursor(win);
@@ -587,6 +601,11 @@ void win_open(win_t *win)
 
 CLEANUP void win_close(win_t *win)
 {
+	if (win->top_decor != NULL)
+		zxdg_toplevel_decoration_v1_destroy(win->top_decor);
+	if (win->decor_manager != NULL)
+		zxdg_decoration_manager_v1_destroy(win->decor_manager);
+
 	wl_cursor_theme_destroy(win->pointer.theme);
 	wl_surface_destroy(win->pointer.surface);
 	free_buffer(&win->buffer);

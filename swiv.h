@@ -409,6 +409,8 @@ struct win {
 	struct wl_seat *seat;
 	struct wl_surface *surface;
 	struct xdg_toplevel *xdg_toplevel;
+	struct zxdg_decoration_manager_v1 *decor_manager;
+	struct zxdg_toplevel_decoration_v1 *top_decor;
 
 	struct xkb_context *xkb_context;
 	struct xkb_keymap *xkb_keymap;
