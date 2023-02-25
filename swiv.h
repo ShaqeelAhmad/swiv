@@ -390,6 +390,16 @@ typedef struct {
 	char *buf;
 } win_bar_t;
 
+typedef struct {
+	int fd;
+	uint8_t *data;
+	size_t data_size;
+	cairo_surface_t *cr_surf;
+	cairo_t *cr;
+	PangoLayout *layout;
+	struct wl_buffer *wl_buf;
+} win_buf_t;
+
 struct win {
 	struct wl_display *display;
 	struct wl_compositor *compositor;
@@ -431,14 +441,9 @@ struct win {
 
 	color_t bg;
 	color_t fg;
-	cairo_surface_t *cr_surf;
-	cairo_t *cr;
+
 	PangoFontDescription *font_desc;
-	PangoLayout *layout;
-	struct wl_buffer *buffer;
-	int fd;
-	uint8_t *data;
-	size_t data_size;
+	win_buf_t buffer;
 	int width, height;
 
 	bool quit;
@@ -459,6 +464,7 @@ void win_cursor_pos(win_t*, int*, int*);
 void win_render_imlib_image(win_t *win, int x, int y);
 void win_render_imlib_image_at_size(win_t *win, int x, int y, int w, int h);
 void win_draw_rect(win_t *win, int x, int y, int w, int h, bool fill, int lw, color_t col);
+void win_recreate_buffer(win_t *win);
 
 
 #endif /* SXIV_H */

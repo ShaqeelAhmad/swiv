@@ -78,8 +78,8 @@ void win_render_imlib_image(win_t *win, int x, int y)
 		error(EXIT_FAILURE, 0, "error: cairo surface: %s",
 				cairo_status_to_string(status));
 
-	cairo_set_source_surface(win->cr, img_surf, x, y);
-	cairo_paint(win->cr);
+	cairo_set_source_surface(win->buffer.cr, img_surf, x, y);
+	cairo_paint(win->buffer.cr);
 
 	cairo_surface_destroy(img_surf);
 }
@@ -287,28 +287,30 @@ static void xdg_toplevel_handle_close(void *data, struct xdg_toplevel *xdg_tople
 	win->quit = true;
 }
 
-static void free_buffer(win_t *win)
+static void free_buffer(win_buf_t *buf)
 {
-	if (win->data == NULL)
+	if (buf->data == NULL)
 		return;
 
-	wl_buffer_destroy(win->buffer);
+	wl_buffer_destroy(buf->wl_buf);
 
-	close(win->fd);
-	win->data = NULL;
-	win->data_size = 0;
-	win->buffer = NULL;
+	close(buf->fd);
+	buf->data = NULL;
+	buf->data_size = 0;
+	buf->wl_buf = NULL;
 
-	g_object_unref(win->layout);
-	win->layout = NULL;
-	cairo_destroy(win->cr);
-	win->cr = NULL;
+	g_object_unref(buf->layout);
+	buf->layout = NULL;
+	cairo_destroy(buf->cr);
+	buf->cr = NULL;
 }
 
-static void init_buffer(win_t *win)
+static win_buf_t new_buffer(int width, int height, struct wl_shm *shm,
+		PangoFontDescription *font_desc)
 {
-	int stride = win->width * 4;
-	int shm_pool_size = win->height * stride;
+	win_buf_t buf = {0};
+	int stride = width * 4;
+	int shm_pool_size = height * stride;
 
 	int fd = allocate_shm_file(shm_pool_size);
 	if (fd < 0)
@@ -321,45 +323,58 @@ static void init_buffer(win_t *win)
 		error(EXIT_FAILURE, errno, "error: failed to allocate framebuffer");
 	}
 
-	struct wl_shm_pool *pool = wl_shm_create_pool(win->shm, fd, shm_pool_size);
+	struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, shm_pool_size);
 	if (pool == NULL) {
 		close(fd);
 		munmap(pool_data, shm_pool_size);
 		error(EXIT_FAILURE, errno, "error: failed to create shm pool");
 	}
 
-	struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, win->width,
-			win->height, stride, WL_SHM_FORMAT_ARGB8888);
+	struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, width,
+			height, stride, WL_SHM_FORMAT_ARGB8888);
 	if (buffer == NULL) {
 		error(EXIT_FAILURE, errno, "error: failed to create wl_buffer");
 	}
 	wl_shm_pool_destroy(pool);
 
-	win->fd = fd;
-	win->buffer = buffer;
-	win->data = pool_data;
-	win->data_size = shm_pool_size;
+	buf.fd = fd;
+	buf.wl_buf = buffer;
+	buf.data = pool_data;
+	buf.data_size = shm_pool_size;
 
-	win->cr_surf = cairo_image_surface_create_for_data(
-			(unsigned char *)win->data, CAIRO_FORMAT_ARGB32, win->width,
-			win->height, 4 * win->width);
-	cairo_status_t status = cairo_surface_status(win->cr_surf);
+	buf.cr_surf = cairo_image_surface_create_for_data(
+			(unsigned char *)buf.data, CAIRO_FORMAT_ARGB32, width,
+			height, 4 * width);
+	cairo_status_t status = cairo_surface_status(buf.cr_surf);
 	if (status != CAIRO_STATUS_SUCCESS) {
 		error(EXIT_FAILURE, 0, "error: cairo surface: %s",
 				cairo_status_to_string(status));
 	}
-	win->cr = cairo_create(win->cr_surf);
-	status = cairo_status(win->cr);
-	cairo_surface_destroy(win->cr_surf);
+	buf.cr = cairo_create(buf.cr_surf);
+	status = cairo_status(buf.cr);
+	cairo_surface_destroy(buf.cr_surf);
 	if (status != CAIRO_STATUS_SUCCESS) {
 		error(EXIT_FAILURE, 0, "error: cairo: %s",
 				cairo_status_to_string(status));
 	}
 
-	win->layout = pango_cairo_create_layout(win->cr);
-	pango_layout_set_font_description(win->layout, win->font_desc);
+	buf.layout = pango_cairo_create_layout(buf.cr);
+	pango_layout_set_font_description(buf.layout, font_desc);
+	return buf;
 }
 
+void win_recreate_buffer(win_t *win)
+{
+	// Copy the contents of the previous buffer to the newer buffer for
+	// smoother resizing since redrawing the whole image is kind of slow.
+	win_buf_t prev = win->buffer;
+	win->buffer = new_buffer(win->width, win->height + win->bar.h, win->shm, win->font_desc);
+
+	cairo_set_source_surface(win->buffer.cr, prev.cr_surf, 0, 0);
+	cairo_paint(win->buffer.cr);
+
+	free_buffer(&prev);
+}
 
 static void xdg_toplevel_handle_configure(void *data,
 		struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height,
@@ -376,14 +391,11 @@ static void xdg_toplevel_handle_configure(void *data,
 	else
 		win->height = height;
 
-	free_buffer(win);
-	init_buffer(win);
 
 	if (win->bar.h > 0)
 		win->height -= win->bar.h;
 
 	win->resized = true;
-	win->redraw = true;
 }
 
 static const struct xdg_toplevel_listener xdg_toplevel_listener = {
@@ -413,10 +425,10 @@ void win_init(win_t *win)
 	if (options->font != NULL)
 		win->font_desc = pango_font_description_from_string(options->font);
 
-	init_buffer(win);
+	win->buffer = new_buffer(win->width, win->height, win->shm, win->font_desc);
 
 	int fontheight;
-	pango_layout_get_pixel_size(win->layout, NULL, &fontheight);
+	pango_layout_get_pixel_size(win->buffer.layout, NULL, &fontheight);
 	barheight = fontheight + 2 * V_TEXT_PAD;
 
 
@@ -565,7 +577,7 @@ void win_open(win_t *win)
 	wl_surface_commit(win->surface);
 	wl_display_roundtrip(win->display);
 
-	wl_surface_attach(win->surface, win->buffer, 0, 0);
+	wl_surface_attach(win->surface, win->buffer.wl_buf, 0, 0);
 	wl_surface_damage_buffer(win->surface, 0, 0, UINT32_MAX, UINT32_MAX);
 	wl_surface_commit(win->surface);
 
@@ -577,7 +589,7 @@ CLEANUP void win_close(win_t *win)
 {
 	wl_cursor_theme_destroy(win->pointer.theme);
 	wl_surface_destroy(win->pointer.surface);
-	free_buffer(win);
+	free_buffer(&win->buffer);
 	xdg_toplevel_destroy(win->xdg_toplevel);
 	xdg_surface_destroy(win->xdg_surface);
 	xdg_wm_base_destroy(win->xdg_wm_base);
@@ -608,26 +620,26 @@ void win_toggle_bar(win_t *win)
 
 void win_clear(win_t *win)
 {
-	cairo_set_source_rgba(win->cr, win->bg.r, win->bg.g, win->bg.b, win->bg.a);
-	cairo_paint(win->cr);
+	cairo_set_source_rgba(win->buffer.cr, win->bg.r, win->bg.g, win->bg.b, win->bg.a);
+	cairo_paint(win->buffer.cr);
 }
 
 #define TEXTWIDTH(win, text, len) \
 	win_draw_text(win, NULL, 0, 0, text, len, 0)
 
-static int win_draw_text(win_t *win, color_t *color, int x, int y, char *text,
+static int win_draw_text(win_buf_t *buf, color_t *color, int x, int y, char *text,
 		int len, int w)
 {
 	int width;
-	pango_layout_set_text(win->layout, text, len);
-	pango_layout_get_pixel_size(win->layout, &width, NULL);
+	pango_layout_set_text(buf->layout, text, len);
+	pango_layout_get_pixel_size(buf->layout, &width, NULL);
 
 	if (color == NULL)
 		return width;
 
-	cairo_move_to(win->cr, x, y);
-	cairo_set_source_rgba(win->cr, color->r, color->g, color->b, color->a);
-	pango_cairo_show_layout(win->cr, win->layout);
+	cairo_move_to(buf->cr, x, y);
+	cairo_set_source_rgba(buf->cr, color->r, color->g, color->b, color->a);
+	pango_cairo_show_layout(buf->cr, buf->layout);
 
 	return width;
 }
@@ -636,6 +648,7 @@ static void win_draw_bar(win_t *win)
 {
 	int len, x, y, w, tw;
 	win_bar_t *l, *r;
+	win_buf_t *buf = &win->buffer;
 
 	if ((l = &win->bar.l)->buf == NULL || (r = &win->bar.r)->buf == NULL)
 		return;
@@ -643,24 +656,24 @@ static void win_draw_bar(win_t *win)
 	y = win->height + V_TEXT_PAD;
 	w = win->width - 2*H_TEXT_PAD;
 
-	cairo_set_source_rgba(win->cr, win->fg.r, win->fg.g, win->fg.b, win->fg.a);
-	cairo_rectangle(win->cr, 0, win->height, win->width, win->bar.h);
-	cairo_fill(win->cr);
+	cairo_set_source_rgba(buf->cr, win->fg.r, win->fg.g, win->fg.b, win->fg.a);
+	cairo_rectangle(buf->cr, 0, win->height, win->width, win->bar.h);
+	cairo_fill(buf->cr);
 
 	if ((len = strlen(r->buf)) > 0) {
-		if ((tw = TEXTWIDTH(win, r->buf, len)) > w)
+		if ((tw = TEXTWIDTH(buf, r->buf, len)) > w)
 			return;
 
 		x = win->width - tw - 2 * H_TEXT_PAD;
 		w -= tw;
 
-		win_draw_text(win, &win->bg, x, y, r->buf, len, tw);
+		win_draw_text(buf, &win->bg, x, y, r->buf, len, tw);
 	}
 	if ((len = strlen(l->buf)) > 0) {
 		x = H_TEXT_PAD;
 		w -= H_TEXT_PAD; /* gap between left and right parts */
 
-		win_draw_text(win, &win->bg, x, y, l->buf, len, w);
+		win_draw_text(buf, &win->bg, x, y, l->buf, len, w);
 	}
 }
 
@@ -675,12 +688,13 @@ void win_draw(win_t *win)
 void win_draw_rect(win_t *win, int x, int y, int w, int h, bool fill, int lw,
 		color_t col)
 {
-	cairo_set_source_rgba(win->cr, col.r, col.g, col.b, col.a);
-	cairo_set_line_width(win->cr, lw);
-	cairo_rectangle(win->cr, x, y, w, h);
+	cairo_t *cr = win->buffer.cr;
+	cairo_set_source_rgba(cr, col.r, col.g, col.b, col.a);
+	cairo_set_line_width(cr, lw);
+	cairo_rectangle(cr, x, y, w, h);
 
 	if (fill)
-		cairo_fill(win->cr);
+		cairo_fill(cr);
 	else
-		cairo_stroke(win->cr);
+		cairo_stroke(cr);
 }

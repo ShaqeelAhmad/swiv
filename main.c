@@ -487,7 +487,7 @@ void run_key_handler(const char *key, uint32_t mask)
 	win_set_cursor(&win, CURSOR_WATCH);
 
 	// We're redrawing the bar manually here
-	wl_surface_attach(win.surface, win.buffer, 0, 0);
+	wl_surface_attach(win.surface, win.buffer.wl_buf, 0, 0);
 	wl_surface_damage_buffer(win.surface, 0, win.height, win.width, win.bar.h);
 	wl_surface_commit(win.surface);
 	wl_display_dispatch(win.display);
@@ -781,22 +781,27 @@ wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
 	cb = wl_surface_frame(win->surface);
 	wl_callback_add_listener(cb, &wl_surface_frame_listener, data);
 
-	if (win->redraw) {
-		if (win->resized) {
-			if (mode == MODE_IMAGE) {
-				img.dirty = true;
-				img.checkpan = true;
-			} else {
-				tns.dirty = true;
-			}
-			win->resized = false;
+	if (win->resized) {
+		if (mode == MODE_IMAGE) {
+			img.dirty = true;
+			img.checkpan = true;
+		} else {
+			tns.dirty = true;
 		}
-		redraw();
 
-		wl_surface_attach(win->surface, win->buffer, 0, 0);
-		wl_surface_damage_buffer(win->surface, 0, 0, win->width, win->height + win->bar.h);
+		win_recreate_buffer(win);
+		win->resized = false;
+		win->redraw = true;
+	} else if (win->redraw) {
+		redraw();
 		win->redraw = false;
+	} else {
+		wl_surface_commit(win->surface);
+		return;
 	}
+	wl_surface_attach(win->surface, win->buffer.wl_buf, 0, 0);
+	wl_surface_damage_buffer(win->surface, 0, 0, win->width,
+			win->height + win->bar.h);
 	wl_surface_commit(win->surface);
 }
 
