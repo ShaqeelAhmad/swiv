@@ -385,7 +385,16 @@ static void xdg_toplevel_handle_configure(void *data,
 		struct xdg_toplevel *xdg_toplevel, int32_t width, int32_t height,
 		struct wl_array *states)
 {
+	enum xdg_toplevel_state *state;
 	win_t *win = data;
+
+	win->fullscreen = false;
+	wl_array_for_each(state, states) {
+		if (*state == XDG_TOPLEVEL_STATE_FULLSCREEN)
+			win->fullscreen = true;
+	}
+
+
 	if (width <= 0)
 		win->width = WIN_WIDTH;
 	else
@@ -395,7 +404,6 @@ static void xdg_toplevel_handle_configure(void *data,
 		win->height = WIN_HEIGHT;
 	else
 		win->height = height;
-
 
 	if (win->bar.h > 0)
 		win->height -= win->bar.h;
@@ -618,12 +626,11 @@ CLEANUP void win_close(win_t *win)
 
 void win_toggle_fullscreen(win_t *win)
 {
-	win->fullscreen = !win->fullscreen;
-
+	// win->fullscreen value will be set at xdg_toplevel_handle_configure
 	if (win->fullscreen)
-		xdg_toplevel_set_fullscreen(win->xdg_toplevel, NULL);
-	else
 		xdg_toplevel_unset_fullscreen(win->xdg_toplevel);
+	else
+		xdg_toplevel_set_fullscreen(win->xdg_toplevel, NULL);
 }
 
 void win_toggle_bar(win_t *win)
