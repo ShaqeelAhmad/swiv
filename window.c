@@ -578,7 +578,8 @@ void win_open(win_t *win)
 	xdg_toplevel_add_listener(win->xdg_toplevel, &xdg_toplevel_listener, win);
 
 	xdg_toplevel_set_title(win->xdg_toplevel, "swiv");
-	xdg_toplevel_set_app_id(win->xdg_toplevel, "swiv");
+	xdg_toplevel_set_app_id(win->xdg_toplevel,
+			options->res_name != NULL ? options->res_name : "swiv");
 
 	if (options->fullscreen)
 		win_toggle_fullscreen(win);

@@ -108,6 +108,7 @@ void parse_options(int argc, char **argv)
 
 	_options.fullscreen = false;
 	_options.hide_bar = false;
+	_options.res_name = NULL;
 	_options.font = NULL;
 	_options.bg = (color_t){
 		.a = 1,
@@ -188,7 +189,7 @@ void parse_options(int argc, char **argv)
 				_options.startnum = n - 1;
 				break;
 			case 'N':
-				// Ignored
+				_options.res_name = optarg;
 				break;
 			case 'o':
 				_options.to_stdout = true;

@@ -286,6 +286,7 @@ struct opt {
 	/* window: */
 	bool fullscreen;
 	bool hide_bar;
+	char *res_name;
 	char *font;
 	color_t bg;
 	color_t fg;
