@@ -290,6 +290,11 @@ struct opt {
 	char *font;
 	color_t bg;
 	color_t fg;
+	struct {
+		int w;
+		int h;
+	} geometry;
+
 
 	/* misc flags: */
 	bool quiet;

@@ -85,6 +85,31 @@ static bool parse_color(color_t *color, char *s)
 	return color->r >= 0 && color->g >= 0 && color->b >= 0 && color->a >= 0;
 }
 
+// This function only parses the size, offsets are ignored.
+static void parse_geometry(char *s, int *w, int *h)
+{
+	long n;
+	char *end = s;
+
+	if (s == NULL || *s == '\0')
+		return;
+
+	if (*s != 'x') {
+		n = strtol(s, &end, 10);
+		if (n < 0 || end == s)
+			return;
+		*w = n;
+	}
+	s = end;
+	if (*s == 'x') {
+		s++;
+		n = strtol(s, &end, 10);
+		if (n < 0 || end == s)
+			return;
+		*h = n;
+	}
+}
+
 void parse_options(int argc, char **argv)
 {
 	int n, opt;
@@ -122,6 +147,8 @@ void parse_options(int argc, char **argv)
 		.g = 0,
 		.b = 0,
 	};
+	_options.geometry.w = 0;
+	_options.geometry.h = 0;
 
 	_options.quiet = false;
 	_options.thumb_mode = false;
@@ -174,7 +201,8 @@ void parse_options(int argc, char **argv)
 				_options.gamma = n;
 				break;
 			case 'g':
-				// Ignored
+				parse_geometry(optarg, &_options.geometry.w,
+						&_options.geometry.h);
 				break;
 			case 'h':
 				print_usage();

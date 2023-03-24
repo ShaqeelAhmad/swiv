@@ -420,8 +420,8 @@ void win_init(win_t *win)
 {
 	memset(win, 0, sizeof(win_t));
 
-	win->height = WIN_HEIGHT;
-	win->width = WIN_WIDTH;
+	win->height = options->geometry.h > 0 ? options->geometry.h : WIN_HEIGHT;
+	win->width = options->geometry.w > 0 ? options->geometry.w : WIN_WIDTH;
 	if ((win->display = wl_display_connect(NULL)) == NULL)
 		error(EXIT_FAILURE, 0, "error opening wayland display");
 
