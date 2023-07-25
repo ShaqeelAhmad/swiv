@@ -55,16 +55,6 @@ static struct {
 
 static int barheight;
 
-// functions defined in main.c for satisfying listener interfaces
-void keyboard_handle_key(void *data, struct wl_keyboard *wl_keyboard,
-		uint32_t serial, uint32_t time, uint32_t key, uint32_t state);
-void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
-		uint32_t serial, uint32_t time, uint32_t button, uint32_t state);
-void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
-		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y);
-void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time,
-		uint32_t axis, wl_fixed_t value);
-
 void win_render_imlib_image(win_t *win, int x, int y)
 {
 	uint32_t *img_data = imlib_image_get_data_for_reading_only();
@@ -374,7 +364,7 @@ void win_recreate_buffer(win_t *win)
 	// smoother resizing since redrawing the whole image is kind of slow.
 	win_buf_t prev = win->buffer;
 	win->buffer = new_buffer(win->width, win->height + win->bar.h, win->shm, win->font_desc);
-
+	win_clear(win);
 	cairo_set_source_surface(win->buffer.cr, prev.cr_surf, 0, 0);
 	cairo_paint(win->buffer.cr);
 

@@ -154,7 +154,7 @@ static const button_t buttons[] = {
 
 /* mouse scrolling mappings for image mode */
 static const scroll_t scrolls[] = {
-	/* direction of -1 means up / left and 1 means down / right. It changes
+	/* direction of -1 means up / left and +1 means down / right. It changes
 	 * depending on the axis.
 	 */
 

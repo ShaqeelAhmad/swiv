@@ -4,9 +4,9 @@ A fork of [sxiv](https://github.com/xyb3rt/sxiv) for wayland.
 
 Font's are configured with the `-F` command line option and the syntax for it
 follows
-[pango_font_description_from_string](https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html#description)
+[pango_font_description_from_string](https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html#description),
 there are also `-B` and `-C` options for setting the background and foreground
-color respectively.
+colors respectively.
 
 Features
 --------
@@ -75,14 +75,35 @@ the following command:
     $ make config.h
 
 If you want to use your old sxiv *config.h*, the key and mouse mappings will
-need to be changed. For keys, the key must be changed from `XK_*` to
-`XKB_KEY_*`, this sed command might work:
+need to be changed. Here's some help on modifying the *config.h* for swiv, it
+will not be easy if it's heavily modified.
+
+A bunch of macros should be defined in *config.h* as the equivalents in X, like
+`ControlMask` and `None` (look at the example *config.def.h*).
+
+The keys must be changed from `XK_*` to `XKB_KEY_*`, this sed command
+should work:
 
     $ sed 's/XK_/XKB_KEY_/g'
 
-and the mouse mappings have been separated to scroll and button click mappings.
-It isn't easy to automate this part so take a look at the example config.def.h
-and change it manually.
+The mouse button and scroll mappings are separated and the buttons use
+`linux/input-event-codes.h` constants e.g `BTN_LEFT` instead of `1` or `Button1`.
+
+The scroll mappings have an axis and direction:
+
+|-----------------------------------|-----------|--------------------|
+| axis                              | direction | absolute direction |
+|-----------------------------------|-----------|--------------------|
+| WL_POINTER_AXIS_VERTICAL_SCROLL   | +1        | down               |
+|-----------------------------------|-----------|--------------------|
+| WL_POINTER_AXIS_VERTICAL_SCROLL   | -1        | up                 |
+|-----------------------------------|-----------|--------------------|
+| WL_POINTER_AXIS_HORIZONTAL_SCROLL | +1        | right              |
+|-----------------------------------|-----------|--------------------|
+| WL_POINTER_AXIS_HORIZONTAL_SCROLL | -1        | left               |
+|-----------------------------------|-----------|--------------------|
+
+Take a look at the example *config.def.h* before making changes.
 
 Usage
 -----

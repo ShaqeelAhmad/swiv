@@ -711,8 +711,7 @@ void pointer_handle_button(void *data, struct wl_pointer *wl_pointer,
 	}
 }
 
-void
-pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
+void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
 {
 	win_t *win = data;
@@ -731,25 +730,24 @@ pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 	}
 }
 
-void
-pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time,
+void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time,
 		uint32_t axis, wl_fixed_t value)
 {
 	win_t *win = data;
-	static int combined_value = 0;
+	static int accum_value = 0;
 	int i, dir;
-	combined_value += wl_fixed_to_int(value);
+	accum_value += wl_fixed_to_int(value);
 
 	// arbitrary value for avoiding calling functions on every small scroll
-	if (-4 < combined_value && combined_value < 4)
+	if (-4 < accum_value && accum_value < 4)
 		return;
 
 	if (mode == MODE_THUMB && axis == WL_POINTER_AXIS_VERTICAL_SCROLL) {
-		if (tns_scroll(&tns, combined_value < 0 ? DIR_UP : DIR_DOWN,
+		if (tns_scroll(&tns, accum_value < 0 ? DIR_UP : DIR_DOWN,
 					(win->mods_depressed & ControlMask) != 0))
 			win->redraw = true;
 	} else if (mode == MODE_IMAGE) {
-		dir = combined_value < 0 ? -1 : 1;
+		dir = accum_value < 0 ? -1 : 1;
 
 		for (i = 0; i < ARRLEN(scrolls); i++) {
 			if (scrolls[i].axis == axis &&
@@ -763,7 +761,7 @@ pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time,
 			}
 		}
 	}
-	combined_value = 0;
+	accum_value = 0;
 }
 
 static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time);
@@ -772,8 +770,7 @@ static struct wl_callback_listener wl_surface_frame_listener = {
 	.done = wl_surface_frame_done,
 };
 
-static void
-wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
+static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
 {
 	win_t *win = data;
 	wl_callback_destroy(cb);
@@ -790,6 +787,7 @@ wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
 		}
 
 		win_recreate_buffer(win);
+
 		win->resized = false;
 		win->redraw = true;
 	} else if (win->redraw) {
