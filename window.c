@@ -415,8 +415,8 @@ void win_init(win_t *win)
 	if ((win->display = wl_display_connect(NULL)) == NULL)
 		error(EXIT_FAILURE, 0, "error opening wayland display");
 
-	struct wl_registry *registry = wl_display_get_registry(win->display);
-	wl_registry_add_listener(registry, &registry_listener, win);
+	win->registry = wl_display_get_registry(win->display);
+	wl_registry_add_listener(win->registry, &registry_listener, win);
 	wl_display_roundtrip(win->display);
 
 	if (win->shm == NULL || win->compositor == NULL || win->xdg_wm_base == NULL)
@@ -612,6 +612,7 @@ CLEANUP void win_close(win_t *win)
 	xdg_surface_destroy(win->xdg_surface);
 	xdg_wm_base_destroy(win->xdg_wm_base);
 	wl_surface_destroy(win->surface);
+	wl_registry_destroy(win->registry);
 	wl_display_disconnect(win->display);
 }
 
