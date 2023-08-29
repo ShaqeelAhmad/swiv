@@ -638,8 +638,12 @@ void win_toggle_bar(win_t *win)
 
 void win_clear(win_t *win)
 {
-	cairo_set_source_rgba(win->buffer.cr, win->bg.r, win->bg.g, win->bg.b, win->bg.a);
-	cairo_paint(win->buffer.cr);
+	cairo_t *cr = win->buffer.cr;
+	cairo_save(cr);
+	cairo_set_source_rgba(cr, win->bg.r, win->bg.g, win->bg.b, win->bg.a);
+	cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
+	cairo_paint(cr);
+	cairo_restore(cr);
 }
 
 #define TEXTWIDTH(win, text, len) \
