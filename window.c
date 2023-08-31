@@ -290,6 +290,7 @@ static void free_buffer(win_buf_t *buf)
 	wl_buffer_destroy(buf->wl_buf);
 
 	close(buf->fd);
+	munmap(buf->data, buf->data_size);
 	buf->data = NULL;
 	buf->data_size = 0;
 	buf->wl_buf = NULL;
@@ -605,6 +606,7 @@ CLEANUP void win_close(win_t *win)
 	if (win->decor_manager != NULL)
 		zxdg_decoration_manager_v1_destroy(win->decor_manager);
 
+	pango_font_description_free(win->font_desc);
 	wl_cursor_theme_destroy(win->pointer.theme);
 	wl_surface_destroy(win->pointer.surface);
 	free_buffer(&win->buffer);
