@@ -338,17 +338,17 @@ static win_buf_t new_buffer(int width, int height, struct wl_shm *shm,
 	buf.data = pool_data;
 	buf.data_size = shm_pool_size;
 
-	buf.cr_surf = cairo_image_surface_create_for_data(
+	cairo_surface_t *cr_surf = cairo_image_surface_create_for_data(
 			(unsigned char *)buf.data, CAIRO_FORMAT_ARGB32, width,
 			height, 4 * width);
-	cairo_status_t status = cairo_surface_status(buf.cr_surf);
+	cairo_status_t status = cairo_surface_status(cr_surf);
 	if (status != CAIRO_STATUS_SUCCESS) {
 		error(EXIT_FAILURE, 0, "error: cairo surface: %s",
 				cairo_status_to_string(status));
 	}
-	buf.cr = cairo_create(buf.cr_surf);
+	buf.cr = cairo_create(cr_surf);
 	status = cairo_status(buf.cr);
-	cairo_surface_destroy(buf.cr_surf);
+	cairo_surface_destroy(cr_surf);
 	if (status != CAIRO_STATUS_SUCCESS) {
 		error(EXIT_FAILURE, 0, "error: cairo: %s",
 				cairo_status_to_string(status));
@@ -357,19 +357,6 @@ static win_buf_t new_buffer(int width, int height, struct wl_shm *shm,
 	buf.layout = pango_cairo_create_layout(buf.cr);
 	pango_layout_set_font_description(buf.layout, font_desc);
 	return buf;
-}
-
-void win_recreate_buffer(win_t *win)
-{
-	// Copy the contents of the previous buffer to the newer buffer for
-	// smoother resizing since redrawing the whole image is kind of slow.
-	win_buf_t prev = win->buffer;
-	win->buffer = new_buffer(win->width, win->height + win->bar.h, win->shm, win->font_desc);
-	win_clear(win);
-	cairo_set_source_surface(win->buffer.cr, prev.cr_surf, 0, 0);
-	cairo_paint(win->buffer.cr);
-
-	free_buffer(&prev);
 }
 
 static void xdg_toplevel_handle_configure(void *data,
@@ -699,6 +686,35 @@ static void win_draw_bar(win_t *win)
 
 		win_draw_text(buf, &win->bg, x, y, l->buf, len, w);
 	}
+}
+
+void win_recreate_buffer(win_t *win)
+{
+	// Copy the contents of the previous buffer to the newer buffer for
+	// smoother resizing since redrawing the whole image is kind of slow.
+	win_buf_t prev = win->buffer;
+	win->buffer = new_buffer(win->width, win->height + win->bar.h,
+			win->shm, win->font_desc);
+	win_clear(win);
+
+	cairo_surface_t *prevSurf = cairo_get_target(prev.cr);
+	if (win->bar.h > 0) {
+		// We always redraw the bar, so it looks better.
+		int width = cairo_image_surface_get_width(prevSurf);
+		int height = cairo_image_surface_get_height(prevSurf);
+		cairo_surface_t *s = cairo_image_surface_create_for_data(
+				(unsigned char *)prev.data, CAIRO_FORMAT_ARGB32,
+				width, height - win->bar.h, 4 * width);
+		cairo_set_source_surface(win->buffer.cr, s, 0, 0);
+		cairo_paint(win->buffer.cr);
+		cairo_surface_destroy(s);
+		win_draw_bar(win);
+	} else {
+		cairo_set_source_surface(win->buffer.cr, prevSurf, 0, 0);
+		cairo_paint(win->buffer.cr);
+	}
+
+	free_buffer(&prev);
 }
 
 void win_draw(win_t *win)

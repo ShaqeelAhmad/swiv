@@ -400,7 +400,6 @@ typedef struct {
 	int fd;
 	uint8_t *data;
 	size_t data_size;
-	cairo_surface_t *cr_surf;
 	cairo_t *cr;
 	PangoLayout *layout;
 	struct wl_buffer *wl_buf;
