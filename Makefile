@@ -35,7 +35,7 @@ lib_gif_0 =
 lib_gif_1 = -lgif
 ldlibs = $(LDLIBS) -lm -lImlib2 \
   $(lib_exif_$(HAVE_LIBEXIF)) $(lib_gif_$(HAVE_GIFLIB)) \
-  `pkg-config --libs cairo pangocairo pango xkbcommon wayland-client wayland-cursor`
+  `pkg-config --libs cairo pangocairo pango xkbcommon wayland-client wayland-cursor fontconfig pangoft2`
 
 objs = autoreload_$(AUTORELOAD).o commands.o image.o main.o options.o \
   thumbs.o util.o window.o xdg-shell-protocol.o shm.o xdg-decoration-unstable-protocol.o

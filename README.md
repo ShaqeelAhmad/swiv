@@ -2,11 +2,19 @@
 
 A fork of [sxiv](https://github.com/xyb3rt/sxiv) for wayland.
 
-Font's are configured with the `-F` command line option and the syntax for it
-follows
-[pango_font_description_from_string](https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html#description),
-there are also `-B` and `-C` options for setting the background and foreground
-colors respectively.
+Configuration
+--------
+
+In sxiv, font, background and foreground color are configured using Xresources.
+Unfortunately wayland doesn't have a equivalent to Xresources, so swiv tries to
+parse the Xresources file directly to get the values from the file. The parsing
+isn't the same and might not work with certain files / features, mainly one
+involving the c preprocessor (cpp). The `$XRES_PATH` environment variable may
+be a path to an Xresources file. If the variable isn't set, `$HOME/.Xresources`
+and `$HOME/.Xdefaults` are tried.
+
+There are also, new flags added, `-F` for font, `-B` for background color and
+`-C` for foreground color.
 
 Features
 --------
@@ -39,6 +47,7 @@ swiv requires the following software to be installed:
 
   * Imlib2
   * cairo
+  * fontconfig
   * pango
   * libwayland
   * xkbcommon

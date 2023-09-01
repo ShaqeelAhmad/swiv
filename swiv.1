@@ -45,15 +45,17 @@ Play animations with a constant frame rate set to
 Play animations of multi-frame images.
 .TP
 .B "\-B " COLOR
-Background color. The syntax for color is '[#]rrggbb[aa]' where r, g, b, a are
-hex numbers and may be prefixed by an optional hash sign.
+Background color and bar foreground color. The syntax for color is
+'[#]rrggbb[aa]' where r, g, b, a are hex numbers and may be prefixed by an
+optional hash sign.
 .TP
 .B \-b
 Do not show info bar on bottom of window.
 .TP
 .B "\-C " COLOR
-Foreground color. The syntax for color is '[#]rrggbb[aa]' where r, g, b, a are
-hex numbers and may be prefixed by an optional hash sign.
+Foreground color and bar background color. The syntax for color is
+'[#]rrggbb[aa]' where r, g, b, a are hex numbers and may be prefixed by an
+optional hash sign.
 .TP
 .B \-c
 Remove all orphaned cache files from the thumbnail cache directory and exit.
@@ -62,8 +64,8 @@ Remove all orphaned cache files from the thumbnail cache directory and exit.
 Ignored.
 .TP
 .BI "\-F " FONT
-Font in the format of pango_font_description_from_string:
-https://docs.gtk.org/Pango/type_func.FontDescription.from_string.html#description .
+Font for the bar in the format of FcNameParse:
+Look at the Font Names section in https://www.freedesktop.org/software/fontconfig/fontconfig-user.html .
 Make sure to use quotations as necessary in the shell.
 .TP
 .B \-f
@@ -435,6 +437,24 @@ afterwards inside the cache directory to remove empty subdirectories:
 .RS
 find . \-depth \-type d \-empty ! \-name '.' \-exec rmdir {} \\;
 .RE
+.SH XRESOURCES
+Wayland doesn't support Xresources so swiv is manually reading and parsing the
+Xresources file to get the certain values like background color, foreground
+color and font. We need the
+.IR $XRES_PATH
+environment variable to be the path to an Xresources file. If this environment
+variable isn't set, the paths
+.IR $HOME/.Xresources
+and
+.IR $HOME/.Xdefaults
+are tried.
+.P
+The values defined in Xresources file can be overridden by using the -B, -C and
+-F options, for background, foreground and font respectively.
+.P
+Note that the parsing may not be the same as in X11. The main difference is
+that the c preprocessor (cpp) program isn't run on the file before being
+processed.
 .SH AUTHOR
 .EX
 Shaqeel Ahmad   <04shaqeel at gmail.com>

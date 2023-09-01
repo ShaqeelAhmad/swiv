@@ -43,48 +43,6 @@ void print_version(void)
 	puts("swiv " VERSION);
 }
 
-static int hexchar(char c)
-{
-	if ('A' <= c && c <= 'F')
-		return c - 'A' + 10;
-	if ('a' <= c && c <= 'f')
-		return c - 'a' + 10;
-	if ('0' <= c && c <= '9')
-		return c - '0';
-
-	return -1;
-}
-
-static double parse_hex(char **s)
-{
-	if ((*s)[0] == '\0' || (*s)[1] == '\0')
-		return -1;
-	int l = hexchar((*s)[0]);
-	int r = hexchar((*s)[1]);
-	if (l < 0 || r < 0)
-		return -1;
-
-	*s += 2;
-	return (double)(l * 16 + r) / 255.0;
-}
-
-static bool parse_color(color_t *color, char *s)
-{
-	if (*s == '#')
-		s++;
-
-	color->r = parse_hex(&s);
-	color->g = parse_hex(&s);
-	color->b = parse_hex(&s);
-
-	if (*s)
-		color->a = parse_hex(&s);
-	else
-		color->a = 1;
-
-	return color->r >= 0 && color->g >= 0 && color->b >= 0 && color->a >= 0;
-}
-
 // This function only parses the size, offsets are ignored.
 static void parse_geometry(char *s, int *w, int *h)
 {
@@ -135,18 +93,9 @@ void parse_options(int argc, char **argv)
 	_options.hide_bar = false;
 	_options.res_name = NULL;
 	_options.font = NULL;
-	_options.bg = (color_t){
-		.a = 1,
-		.r = 1,
-		.g = 1,
-		.b = 1,
-	};
-	_options.fg = (color_t){
-		.a = 1,
-		.r = 0,
-		.g = 0,
-		.b = 0,
-	};
+	_options.bg = NULL;
+	_options.fg = NULL;
+
 	_options.geometry.w = 0;
 	_options.geometry.h = 0;
 
@@ -170,15 +119,13 @@ void parse_options(int argc, char **argv)
 				_options.animate = true;
 				break;
 			case 'B':
-				if (!parse_color(&_options.bg, optarg))
-					error(EXIT_FAILURE, 0, "Invalid argument for option -B: %s", optarg);
+				_options.bg = optarg;
 				break;
 			case 'b':
 				_options.hide_bar = true;
 				break;
 			case 'C':
-				if (!parse_color(&_options.fg, optarg))
-					error(EXIT_FAILURE, 0, "Invalid argument for option -C: %s", optarg);
+				_options.fg = optarg;
 				break;
 			case 'c':
 				_options.clean_cache = true;

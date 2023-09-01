@@ -36,6 +36,11 @@
 #include "xdg-decoration-unstable-client-protocol.h"
 #include "shm.h"
 
+#define XRES_IMPLEMENTATION
+#define XRES_NO_LOG
+#include "rgb.h"
+#include "xres.h"
+
 enum {
 	H_TEXT_PAD = 5,
 	V_TEXT_PAD = 1
@@ -394,8 +399,35 @@ static const struct xdg_toplevel_listener xdg_toplevel_listener = {
 	.close = xdg_toplevel_handle_close,
 };
 
+static bool parse_color(color_t *color, char *s)
+{
+	if (!s || !*s)
+		return false;
+
+	uint8_t r, g, b, a;
+	if (!xres_color(s, &r, &g, &b, &a))
+		return false;
+
+	color->r = r / 255.0;
+	color->g = g / 255.0;
+	color->b = b / 255.0;
+	color->a = a / 255.0;
+
+	return true;
+}
+
+char *
+win_res(char *name, char *def)
+{
+	char *s = xres_get(name);
+	if (s != NULL)
+		return s;
+	return def;
+}
+
 void win_init(win_t *win)
 {
+	char *bg, *fg, *font;
 	memset(win, 0, sizeof(win_t));
 
 	win->height = options->geometry.h > 0 ? options->geometry.h : WIN_HEIGHT;
@@ -410,11 +442,33 @@ void win_init(win_t *win)
 	if (win->shm == NULL || win->compositor == NULL || win->xdg_wm_base == NULL)
 		error(EXIT_FAILURE, 0, "error: no wl_shm, xdg_wm_base or wl_compositor");
 
-	win->bg = options->bg;
-	win->fg = options->fg;
+	xres_load(NULL);
 
-	if (options->font != NULL)
-		win->font_desc = pango_font_description_from_string(options->font);
+	bg = options->bg;
+	if (bg == NULL)
+		bg = xres_get(".background");
+	if (!parse_color(&win->bg, bg))
+		win->bg = (color_t) {1, 1, 1, 1};
+
+	fg = options->fg;
+	if (fg == NULL)
+		fg = xres_get(".foreground");
+	if (!parse_color(&win->fg, fg))
+		win->fg = (color_t) {0, 0, 0, 1};
+
+	font = options->font;
+	if (font == NULL)
+		font = xres_get(".font");
+	if (font == NULL)
+		font = "monospace-8";
+
+	FcInit();
+	FcPattern *pat = FcNameParse((const FcChar8 *)font);
+	win->font_desc = pango_fc_font_description_from_pattern(pat, true);
+	FcPatternDestroy(pat);
+	FcFini();
+
+	xres_unload();
 
 	win->buffer = new_buffer(win->width, win->height, win->shm, win->font_desc);
 

@@ -24,6 +24,8 @@
 #include <cairo.h>
 #include <Imlib2.h>
 #include <pango/pangocairo.h>
+#include <pango/pangofc-fontmap.h>
+#include <fontconfig/fontconfig.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -261,7 +263,7 @@ bool img_frame_animate(img_t*);
 
 
 typedef struct {
-	double a, r, g, b;
+	double r, g, b, a;
 } color_t;
 
 /* options.c */
@@ -288,8 +290,8 @@ struct opt {
 	bool hide_bar;
 	char *res_name;
 	char *font;
-	color_t bg;
-	color_t fg;
+	char *bg;
+	char *fg;
 	struct {
 		int w;
 		int h;
