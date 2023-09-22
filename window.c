@@ -649,10 +649,17 @@ void win_open(win_t *win)
 
 CLEANUP void win_close(win_t *win)
 {
-	if (win->top_decor != NULL)
+	if (win->top_decor)
 		zxdg_toplevel_decoration_v1_destroy(win->top_decor);
-	if (win->decor_manager != NULL)
+	if (win->decor_manager)
 		zxdg_decoration_manager_v1_destroy(win->decor_manager);
+
+	if (win->xkb_keymap)
+		xkb_keymap_unref(win->xkb_keymap);
+	if (win->xkb_state)
+		xkb_state_unref(win->xkb_state);
+	if (win->xkb_context)
+		xkb_context_unref(win->xkb_context);
 
 	pango_font_description_free(win->font_desc);
 	wl_cursor_theme_destroy(win->pointer.theme);
@@ -668,7 +675,7 @@ CLEANUP void win_close(win_t *win)
 
 void win_toggle_fullscreen(win_t *win)
 {
-	// win->fullscreen value will be set at xdg_toplevel_handle_configure
+	// win->fullscreen value will be set at xdg_toplevel_handle_configure().
 	if (win->fullscreen)
 		xdg_toplevel_unset_fullscreen(win->xdg_toplevel);
 	else
