@@ -486,5 +486,6 @@ void pointer_handle_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y);
 void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t time,
 		uint32_t axis, wl_fixed_t value);
+void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time);
 
 #endif /* SXIV_H */

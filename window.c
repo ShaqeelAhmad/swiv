@@ -492,7 +492,7 @@ static void xdg_surface_handle_configure(void *data,
 {
 	win_t *win = data;
 	xdg_surface_ack_configure(xdg_surface, serial);
-	wl_surface_commit(win->surface);
+	win->redraw = true;
 }
 
 static const struct xdg_surface_listener xdg_surface_listener = {
@@ -534,8 +534,8 @@ static void cursor_callback(void *data, struct wl_callback *cb, uint32_t time)
 	win_t *win = data;
 	wl_callback_destroy(cb);
 
-	cb = wl_surface_frame(win->surface);
-	wl_callback_add_listener(cb, &cursor_callback_listener , win);
+	cb = wl_surface_frame(win->pointer.surface);
+	wl_callback_add_listener(cb, &cursor_callback_listener, win);
 
 	win_render_cursor(win);
 
@@ -600,6 +600,10 @@ static void init_cursor(win_t *win)
 	wl_surface_commit(win->pointer.surface);
 }
 
+static struct wl_callback_listener wl_surface_frame_listener = {
+	.done = wl_surface_frame_done,
+};
+
 void win_open(win_t *win)
 {
 	win->surface = wl_compositor_create_surface(win->compositor);
@@ -632,11 +636,14 @@ void win_open(win_t *win)
 	wl_surface_commit(win->surface);
 	wl_display_roundtrip(win->display);
 
+	struct wl_callback *cb = wl_surface_frame(win->surface);
+	wl_callback_add_listener(cb, &wl_surface_frame_listener, win);
+
 	wl_surface_attach(win->surface, win->buffer.wl_buf, 0, 0);
 	wl_surface_damage_buffer(win->surface, 0, 0, UINT32_MAX, UINT32_MAX);
 	wl_surface_commit(win->surface);
 
-	struct wl_callback *cb = wl_surface_frame(win->pointer.surface);
+	cb = wl_surface_frame(win->pointer.surface);
 	wl_callback_add_listener(cb, &cursor_callback_listener, win);
 }
 
@@ -744,31 +751,9 @@ static void win_draw_bar(win_t *win)
 
 void win_recreate_buffer(win_t *win)
 {
-	// Copy the contents of the previous buffer to the newer buffer for
-	// smoother resizing since redrawing the whole image is kind of slow.
-	win_buf_t prev = win->buffer;
+	free_buffer(&win->buffer);
 	win->buffer = new_buffer(win->width, win->height + win->bar.h,
 			win->shm, win->font_desc);
-	win_clear(win);
-
-	cairo_surface_t *prevSurf = cairo_get_target(prev.cr);
-	if (win->bar.h > 0) {
-		// We always redraw the bar, so it looks better.
-		int width = cairo_image_surface_get_width(prevSurf);
-		int height = cairo_image_surface_get_height(prevSurf);
-		cairo_surface_t *s = cairo_image_surface_create_for_data(
-				(unsigned char *)prev.data, CAIRO_FORMAT_ARGB32,
-				width, height - win->bar.h, 4 * width);
-		cairo_set_source_surface(win->buffer.cr, s, 0, 0);
-		cairo_paint(win->buffer.cr);
-		cairo_surface_destroy(s);
-		win_draw_bar(win);
-	} else {
-		cairo_set_source_surface(win->buffer.cr, prevSurf, 0, 0);
-		cairo_paint(win->buffer.cr);
-	}
-
-	free_buffer(&prev);
 }
 
 void win_draw(win_t *win)

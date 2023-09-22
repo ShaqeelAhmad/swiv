@@ -764,13 +764,11 @@ void pointer_handle_axis(void *data, struct wl_pointer *wl_pointer, uint32_t tim
 	accum_value = 0;
 }
 
-static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time);
-
 static struct wl_callback_listener wl_surface_frame_listener = {
 	.done = wl_surface_frame_done,
 };
 
-static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
+void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t time)
 {
 	win_t *win = data;
 	wl_callback_destroy(cb);
@@ -788,8 +786,9 @@ static void wl_surface_frame_done(void *data, struct wl_callback *cb, uint32_t t
 
 		win_recreate_buffer(win);
 
+		redraw();
 		win->resized = false;
-		win->redraw = true;
+		win->redraw = false;
 	} else if (win->redraw) {
 		redraw();
 		win->redraw = false;
@@ -811,9 +810,6 @@ void run(void)
 	struct timeval timeout;
 	fd_set fds;
 	int nfds, wl_fd;
-
-	struct wl_callback *cb = wl_surface_frame(win.surface);
-	wl_callback_add_listener(cb, &wl_surface_frame_listener, &win);
 
 	wl_fd = wl_display_get_fd(win.display);
 	int ret = 1;
