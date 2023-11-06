@@ -100,17 +100,12 @@ The mouse button and scroll mappings are separated and the buttons use
 
 The scroll mappings have an axis and direction:
 
-|-----------------------------------|-----------|--------------------|
 | axis                              | direction | absolute direction |
 |-----------------------------------|-----------|--------------------|
 | WL_POINTER_AXIS_VERTICAL_SCROLL   | +1        | down               |
-|-----------------------------------|-----------|--------------------|
 | WL_POINTER_AXIS_VERTICAL_SCROLL   | -1        | up                 |
-|-----------------------------------|-----------|--------------------|
 | WL_POINTER_AXIS_HORIZONTAL_SCROLL | +1        | right              |
-|-----------------------------------|-----------|--------------------|
 | WL_POINTER_AXIS_HORIZONTAL_SCROLL | -1        | left               |
-|-----------------------------------|-----------|--------------------|
 
 Take a look at the example *config.def.h* before making changes.
 
