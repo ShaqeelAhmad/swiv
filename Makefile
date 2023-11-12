@@ -6,7 +6,7 @@ XDG_DECORATION = $(WL_PROTOCOLS_DIR)/unstable/xdg-decoration/xdg-decoration-unst
 WL_SRC = xdg-shell-protocol.c xdg-decoration-unstable-protocol.c
 WL_HDR = xdg-shell-client-protocol.h xdg-decoration-unstable-client-protocol.h
 
-version = 0.8
+version = 0.1
 
 srcdir = .
 VPATH = $(srcdir)

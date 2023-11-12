@@ -117,4 +117,7 @@ Please see the [man page](./swiv.1) for information on how to use swiv.
 Download & Changelog
 --------------------
 
-TODO
+**v0.1**
+*(12 November 2023)*
+
+  * Initial release
